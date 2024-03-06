@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 import altair as alt
-import plotly.graph_objs as go
 import plotly.express as px
 
 
