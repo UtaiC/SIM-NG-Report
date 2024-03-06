@@ -5,4 +5,4 @@ streamlit>=1.30.0
 tkcalendar>=1.6.1
 pandas>=2.0.3
 openpyxl>=3.0.10
-plotly
+plotly==4.14.3
