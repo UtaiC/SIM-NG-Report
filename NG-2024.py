@@ -14,8 +14,8 @@ def formatted_display(label, value, unit):
     display_text = f"{formatted_value} {unit}"  # Combine formatted value and unit
     st.write(label, display_text, unsafe_allow_html=True)
 st.header('NG Report and Analysis 2024')
-StartWeek = st.sidebar.selectbox('StratWeek',['1','2','3','4','5','6','7','8','9'] )
-EndWeek = st.sidebar.selectbox('EndWeek',['1','2','3','4','5','6','7','8','9'] )
+StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15'] )
+EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15'] )
 # ProdWeek = st.sidebar.selectbox('ProdWeek',['1','2','3','4','5','6','7','8','9'] )
 NG_Type = st.sidebar.selectbox('NG-Type',[
                                         'NG - เกลียวล้มเกลียวแตก',
