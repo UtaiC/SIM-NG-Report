@@ -14,8 +14,8 @@ def formatted_display(label, value, unit):
     display_text = f"{formatted_value} {unit}"  # Combine formatted value and unit
     st.write(label, display_text, unsafe_allow_html=True)
 st.header('NG Report and Analysis 2024')
-StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15'] )
-EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15'] )
+StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] )
+EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] )
 # ProdWeek = st.sidebar.selectbox('ProdWeek',['1','2','3','4','5','6','7','8','9'] )
 NG_Type = st.sidebar.selectbox('NG-Type',[
                                         'NG - เกลียวล้มเกลียวแตก',
@@ -42,7 +42,35 @@ NG_Type = st.sidebar.selectbox('NG-Type',[
                                         'NG - ปาดไม่หมด',
                                         'NG - เชื้อรา คราบสกปรก'] )
 
-############### 2024 #####################
+############### Files Read  #####################
+@st.cache_data 
+def load_dataframes(sheet_names):
+    url = "https://docs.google.com/spreadsheets/d/1pbzO4YI-TkW3AO6yssJgHO9F3FwWb9Rs/export?format=xlsx"
+    dataframes = {}
+    for sheet_name in sheet_names:
+        df = pd.read_excel(url, header=7, engine='openpyxl', sheet_name=sheet_name)
+        dataframes[sheet_name] = df
+    return dataframes
+
+# Load dataframes for the specified range of weeks
+StartWeek = int(StartWeek)
+EndWeek = int(EndWeek)
+all_sheet_names = [str(week) for week in range(StartWeek, EndWeek + 1)]
+dataframes = load_dataframes(all_sheet_names)
+#########################
+# Concatenate dataframes into a single dataframe
+DataMerges = pd.concat(dataframes.values(), ignore_index=True)
+
+# Convert columns to numeric
+DataMerges['Total.4'] = pd.to_numeric(DataMerges['Total.4'], errors='coerce')
+DataMerges['Beginning Balance.6'] = pd.to_numeric(DataMerges['Beginning Balance.6'], errors='coerce')
+
+# Calculate 'QC-Prod' column
+DataMerges['QC-Prod'] = DataMerges['Total.4'] - DataMerges['Beginning Balance.6']
+
+# Group by 'Part no.' and calculate the sum of 'Beginning Balance.6', 'Total.4', and 'QC-Prod'
+QC_Prod = DataMerges.groupby('Part no.')[['Beginning Balance.6', 'Total.4', 'QC-Prod']].sum()
+#################################################
 @st.cache_data 
 def load_data_from_drive():
     url="https://docs.google.com/spreadsheets/d/1g57LMLyDlGkHpyfikvoXwO0fyzz-P_r62qV9M4GssOM/export?format=xlsx"
@@ -50,8 +78,10 @@ def load_data_from_drive():
     return data2024
 data2024 = load_data_from_drive()
 NG_2024=data2024
-
-# Week=str(Week)
+###############
+StartWeek=str(StartWeek)
+EndWeek=str(EndWeek)
+##############
 NG_2024['Weeknum']=NG_2024['Weeknum'].astype(str)
 filtered = NG_2024[
     (NG_2024['Weeknum'] >= StartWeek) &
@@ -110,23 +140,64 @@ NG=ALLNG.columns.str.startswith('NG')
 NGColumns=ALLNG.loc[:,NG]
 ALLNG= ALLNG[['Part No.'] + NGColumns.columns.tolist()]
 ALLNG=ALLNG.groupby('Part No.').sum()
-# ALLNG=ALLNG.fillna(0)
-# ALLNG=ALLNG[ALLNG[NG_Type]!=0]
+########## Merge QC-Prod ###############
+ALLNG=pd.merge(ALLNG,QC_Prod['QC-Prod'],left_index=True,right_index=True,how='left')
+#######################################
+
 ALLNG['SUM-NG']=ALLNG.sum(axis=1)
+ALLNG['SUM-NG']=ALLNG['SUM-NG']-ALLNG['QC-Prod']
+ALLNG['QC-Prod']=ALLNG['QC-Prod'].where(ALLNG['QC-Prod']>0)+ALLNG['SUM-NG']
+ALLNG['NG-%']=(ALLNG['SUM-NG']/ALLNG['QC-Prod'])*100
 ALLNGTop5=ALLNG.nlargest(10,'SUM-NG')
-# ALLNGTop5=ALLNGTop5[ALLNGTop5[NG_Type]!=0]
-# ALLNGTop5=ALLNGTop5[ALLNGTop5[ALLNGTop5.columns]!=0]
-ALLNGTopNG=ALLNGTop5.T
-ALLNGTopNG=ALLNGTopNG.drop('SUM-NG')
-ALLNGTopNG['NG-Top']=ALLNGTopNG.sum(axis=1)
-ALLNGTopNG=ALLNGTopNG.nlargest(10,'NG-Top')
 
 st.subheader(f'Over All NG by week range: {StartWeek} - {EndWeek}')
 st.write('NG-Part_No Top 10')
 ALLNGTop5
 formatted_display('TT-NG SUM Pcs:',round(TTNG),'Pcs')
 st.write('NG-Types Top 10')
+ALLNGTopNG=ALLNGTop5.T
+ALLNGTopNG['NG-Top']=ALLNGTopNG.sum(axis=1)
+ALLNGTopNG=ALLNGTopNG.drop(index=['QC-Prod','NG-%','SUM-NG'])
+ALLNGTopNG=ALLNGTopNG.nlargest(12,'NG-Top')
 ALLNGTopNG
+################## Top 10 Part NG ###################
+PartTOP10=ALLNGTop5.nlargest(10,'NG-%')
+df = pd.DataFrame({
+    "x": PartTOP10.index,
+    "y": PartTOP10['NG-%'],
+    "category": ["Part NG-%"] * len(PartTOP10)  # Assigning 'Part_No' to all entries as 'category'
+})
+figPCT = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.2f}%'), color_discrete_sequence=['#F97500'])
+
+# Updating layout to display text on top of bars
+figPCT.update_traces(textposition='outside')
+figPCT.update_layout(
+    title=f'Part No NG-% TOP10@ range WK0{StartWeek} - WK0{EndWeek}',
+    xaxis_title="Part No",
+    yaxis_title="NG_%"
+)
+
+st.plotly_chart(figPCT)
+################## Top 10 Cases NG ###################
+st.write("---")
+df = pd.DataFrame({
+    "x": ALLNGTopNG.index,
+    "y": ALLNGTopNG['NG-Top'],
+    "category": ["Cases NG"] * len(ALLNGTopNG)  # Assigning 'Part_No' to all entries as 'category'
+})
+figCases = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.0f}'), color_discrete_sequence=['#F9C000'])
+
+# Updating layout to display text on top of bars
+figCases.update_traces(textposition='outside')
+figCases.update_layout(
+    title=f'Cases NG TOP10@ range WK0{StartWeek} - WK0{EndWeek}',
+    xaxis_title="NG_Cases",
+    yaxis_title="NG_Pcs",
+    height=500
+)
+
+st.plotly_chart(figCases)
+################################################
 st.write("---")
 st.write('NG Top5 on type:',NG_Type)
 Top5
@@ -142,7 +213,7 @@ TrendNG = TrendNG.groupby('Weeknum').sum()
 TrendNG['NG-PCT']=(TrendNG['ยอดตรวจงาน NG']/TrendNG['ยอดตรวจงาน NG'].sum())*100
 TrendNG
 ############ Chart-Trend ##############################
-
+st.write("---")
 df = pd.DataFrame({
     "x": TrendNG.index,
     "y": TrendNG['ยอดตรวจงาน NG'],
@@ -153,9 +224,10 @@ fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'
 # Updating layout to display text on top of bars
 fig.update_traces(textposition='outside')
 fig.update_layout(
-    title="NG Cases Trend by Week",
+    title=f"NG Cases Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
     xaxis_title="Week",
     yaxis_title="NG_Pcs"
 )
 
 st.plotly_chart(fig)
+
