@@ -10,9 +10,10 @@ Logo=Image.open('SIM-LOGO-02.jpg')
 st.image(Logo,width=680)
 #########################################################
 def formatted_display(label, value, unit):
-    formatted_value = "<span style='color:yellow'>{:,.0f}</span>".format(value)  # Format value with comma separator and apply green color
+    formatted_value = "<span style='color:yellow'>{:,.2f}</span>".format(value)  # Format value with comma separator and apply green color
     display_text = f"{formatted_value} {unit}"  # Combine formatted value and unit
     st.write(label, display_text, unsafe_allow_html=True)
+######################################################
 st.header('NG Report and Analysis 2024')
 StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] )
 EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] )
@@ -43,6 +44,9 @@ NG_Type = st.sidebar.selectbox('NG-Type',[
                                         'NG - เชื้อรา คราบสกปรก'] )
 
 ############### Files Read  #####################
+Std_Cost=pd.read_excel('STD-Cost-2023.xlsx')
+# Std_Cost
+################################################
 @st.cache_data 
 def load_dataframes(sheet_names):
     url = "https://docs.google.com/spreadsheets/d/1pbzO4YI-TkW3AO6yssJgHO9F3FwWb9Rs/export?format=xlsx"
@@ -69,7 +73,8 @@ DataMerges['Beginning Balance.6'] = pd.to_numeric(DataMerges['Beginning Balance.
 DataMerges['QC-Prod'] = DataMerges['Total.4'] - DataMerges['Beginning Balance.6']
 
 # Group by 'Part no.' and calculate the sum of 'Beginning Balance.6', 'Total.4', and 'QC-Prod'
-QC_Prod = DataMerges.groupby('Part no.')[['Beginning Balance.6', 'Total.4', 'QC-Prod']].sum()
+QC_Prod = DataMerges.groupby('Part no.')[['Beginning Balance.6', 'Total.4', 'QC-Prod','ACT.7']].sum()
+
 #################################################
 @st.cache_data 
 def load_data_from_drive():
@@ -92,6 +97,8 @@ chart=filtered
 ALLNG=filtered
 ###############
 TrendNG=filtered
+################
+TrendNG_B=filtered
 ################
 NG_WK=filtered
 NG_WK=filtered
@@ -208,16 +215,24 @@ st.write("---")
 st.write('Trending Total NG by Weekly')
 TrendNG.columns.str.startswith('NG')
 NGColumns=TrendNG.loc[:,NG]
-TrendNG= TrendNG[['Weeknum','ยอดตรวจงาน NG'] + NGColumns.columns.tolist()]
-TrendNG = TrendNG.groupby('Weeknum').sum()
+TrendNG= TrendNG[['Part No.','Weeknum','ยอดตรวจงาน NG'] + NGColumns.columns.tolist()]
 TrendNG['NG-PCT']=(TrendNG['ยอดตรวจงาน NG']/TrendNG['ยอดตรวจงาน NG'].sum())*100
-TrendNG
-############ Chart-Trend ##############################
+TrendNG = TrendNG.groupby('Weeknum').agg({'ยอดตรวจงาน NG':'sum'})
+# TrendNG
+###########################
+TrendNG_B=pd.merge(TrendNG_B,Std_Cost,left_on='Part No.',right_on='Part_No',how='outer')
+TrendNG_B['NG-Cost']=TrendNG_B['ยอดตรวจงาน NG']*TrendNG_B['FG1Cost']
+TrendNG_B=TrendNG_B[['Part No.','Weeknum','ยอดตรวจงาน NG','FG1Cost','NG-Cost']]
+# TrendNG_B = TrendNG_B.groupby('Part_No').agg({'Weeknum':'first','ยอดตรวจงาน NG':'first','FG1Cost':'mean','NG-Cost':'sum'})
+TrendNG_B = TrendNG_B.groupby('Weeknum').agg({'ยอดตรวจงาน NG':'sum','NG-Cost':'sum'})
+
+TrendNG_B
+##################################
 st.write("---")
 df = pd.DataFrame({
     "x": TrendNG.index,
     "y": TrendNG['ยอดตรวจงาน NG'],
-    "category": ["Week"] * len(TrendNG)  # Assigning 'Part_No' to all entries as 'category'
+    "category": ["Week-NG"] * len(TrendNG)  # Assigning 'Part_No' to all entries as 'category'
 })
 fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.0f}'), color_discrete_sequence=['#FF451B'])
 
@@ -228,6 +243,37 @@ fig.update_layout(
     xaxis_title="Week",
     yaxis_title="NG_Pcs"
 )
-
 st.plotly_chart(fig)
 
+############ Chart-Trend-Cost ##############################
+
+st.write("---")
+df = pd.DataFrame({
+    "x": TrendNG_B.index,
+    "y": TrendNG_B['NG-Cost'],
+    "category": ["Week-Cost"] * len(TrendNG)  # Assigning 'Part_No' to all entries as 'category'
+})
+fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.0f}.B'), color_discrete_sequence=['#FF451B'])
+
+# Updating layout to display text on top of bars
+fig.update_traces(textposition='outside')
+fig.update_layout(
+    title=f"NG Cost Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+    xaxis_title="Week",
+    yaxis_title="NG_Cost"
+)
+st.plotly_chart(fig)
+############ Sales ###
+st.write('SUMARIZE  NG-Cost loss VS Sales AMT')
+Std_Cost.set_index('Part_No',inplace=True)
+Sales=QC_Prod['ACT.7']
+Sales=pd.merge(Sales,Std_Cost['Prices'],left_index=True,right_index=True,how='outer')
+Sales.drop(index=['Part no.','Part no.','KOSHIN'],inplace=True)
+Sales['Sales-AMT']=Sales['ACT.7']*Sales['Prices']
+SalesAMT=Sales['Sales-AMT'].sum()
+NGCOST=TrendNG_B['NG-Cost'].sum()
+formatted_display('Sales AMT:',round(SalesAMT,2),'B.')
+formatted_display('NG Cost:',round(NGCOST,2),'B.')
+LossPCT=(NGCOST/SalesAMT)*100
+formatted_display('NG Cost-%:',round(LossPCT,2),'%')
+st.write("---")
