@@ -100,6 +100,8 @@ TrendNG=filtered
 ################
 TrendNG_B=filtered
 ################
+TrendPartNG=filtered
+###############
 NG_WK=filtered
 NG_WK=filtered
 NG_WK=NG_WK[['Part No.',NG_Type]]
@@ -263,7 +265,7 @@ fig.update_layout(
     yaxis_title="NG_Cost"
 )
 st.plotly_chart(fig)
-############ Sales ###
+############ Sales and NG Cost ###############
 st.write('SUMARIZE  NG-Cost loss VS Sales AMT')
 Std_Cost.set_index('Part_No',inplace=True)
 Sales=QC_Prod['ACT.7']
@@ -277,3 +279,58 @@ formatted_display('NG Cost:',round(NGCOST,2),'B.')
 LossPCT=(NGCOST/SalesAMT)*100
 formatted_display('NG Cost-%:',round(LossPCT,2),'%')
 st.write("---")
+############# Part Monitoring ##########################
+st.write('Trending NG by Part No')
+TrendPartNG=TrendPartNG= TrendPartNG[['Part No.','Weeknum','ยอดตรวจงาน NG'] + NGColumns.columns.tolist()]
+TrendPartNG['Weeknum'] = TrendPartNG['Weeknum'].astype(str)
+# TrendNG
+##############################
+st.write('**Checking Part No NG by Weekly Trending**')
+    # Get the user input for the 4-digit Part No
+PartNo = st.text_input('Input 4-digit Part No')
+####################################
+if len(PartNo) == 4:
+    PartMASS = TrendPartNG
+    # PartNo
+    PartMASS['Part No.']=PartMASS['Part No.'].astype(str)
+    mask = PartMASS['Part No.'].str.contains(PartNo)
+    matching_rows = PartMASS[mask]
+    ############################
+    TTPCS=matching_rows['ยอดตรวจงาน NG'].sum()
+    if len(matching_rows) > 0:
+        ###################
+        Other_Column = ['ยอดตรวจงาน NG'] + list(NGColumns.columns)
+        matching_rows = matching_rows.groupby('Weeknum').agg({'Part No.': 'first', **{col: 'sum' for col in Other_Column}})
+        matching_rows
+        formatted_display('Total Pcs:',round(TTPCS,2),'Pcs')
+ 
+    else:
+        st.write(f'No matching Part No found for "{PartNo}"')
+else:
+    st.write('Please input a 4-digit Part No')
+############ Chart-Trend-Part No ##############################
+st.write("---")
+
+# Ensure 'matching_rows' is not empty before creating the DataFrame 'df'
+if not matching_rows.empty:
+    df = pd.DataFrame({
+        "x": matching_rows.index,
+        "y": matching_rows['ยอดตรวจงาน NG'],
+        "category": ["Week-NG"] * len(matching_rows)  # Assigning 'Week-NG' to all entries as 'category'
+    })
+    
+    fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.0f} Pcs'), color_discrete_sequence=['#FF451B'])
+
+    # Updating layout to display text on top of bars
+    fig.update_traces(textposition='outside')
+    fig.update_layout(
+        title=f"Part No #{PartNo} NG Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+        xaxis_title="Week",
+        yaxis_title="NG_Pcs"
+    )
+    
+    st.plotly_chart(fig)
+else:
+    st.write("No matching data found.")
+    #####################
+    
