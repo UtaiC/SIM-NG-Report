@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import altair as alt
 import plotly.express as px
+import sys
 
 
 Logo=Image.open('SIM-LOGO-02.jpg')
@@ -19,8 +20,8 @@ StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','1
 EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] )
 # ProdWeek = st.sidebar.selectbox('ProdWeek',['1','2','3','4','5','6','7','8','9'] )
 NG_Type = st.sidebar.selectbox('NG-Type',[
-                                        'NG - เกลียวล้มเกลียวแตก',
                                         'NG - ตามด (Porosity)',
+                                        'NG - เกลียวล้มเกลียวแตก',
                                         'NG - ชิ้นงานรูตื้นหรือรูลึก ',
                                         'NG - รอยกระแทกหลัง MC',
                                         'NG - รอยตะไบหลัง MC',
@@ -280,7 +281,7 @@ LossPCT=(NGCOST/SalesAMT)*100
 formatted_display('NG Cost-%:',round(LossPCT,2),'%')
 st.write("---")
 ############# Part Monitoring ##########################
-st.write('Trending NG by Part No')
+st.subheader('Trending NG by Part No')
 TrendPartNG=TrendPartNG= TrendPartNG[['Part No.','Weeknum','ยอดตรวจงาน NG'] + NGColumns.columns.tolist()]
 TrendPartNG['Weeknum'] = TrendPartNG['Weeknum'].astype(str)
 # TrendNG
@@ -295,6 +296,7 @@ if len(PartNo) == 4:
     PartMASS['Part No.']=PartMASS['Part No.'].astype(str)
     mask = PartMASS['Part No.'].str.contains(PartNo)
     matching_rows = PartMASS[mask]
+
     ############################
     TTPCS=matching_rows['ยอดตรวจงาน NG'].sum()
     if len(matching_rows) > 0:
@@ -303,11 +305,13 @@ if len(PartNo) == 4:
         matching_rows = matching_rows.groupby('Weeknum').agg({'Part No.': 'first', **{col: 'sum' for col in Other_Column}})
         matching_rows
         formatted_display('Total Pcs:',round(TTPCS,2),'Pcs')
- 
     else:
-        st.write(f'No matching Part No found for "{PartNo}"')
-else:
-    st.write('Please input a 4-digit Part No')
+        st.write("No matching data found.")
+        st.write("Pls Input 4-digit of the end of Part No")
+        sys.exit()  # Terminate the program
+if len(PartNo) == 0:
+    st.write("Pls Input 4-digit of the end of Part No")
+    sys.exit()
 ############ Chart-Trend-Part No ##############################
 st.write("---")
 
@@ -330,7 +334,5 @@ if not matching_rows.empty:
     )
     
     st.plotly_chart(fig)
-else:
-    st.write("No matching data found.")
     #####################
-    
+st.write("---End Application---")
