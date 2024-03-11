@@ -88,7 +88,7 @@ NG_2024=data2024
 StartWeek=str(StartWeek)
 EndWeek=str(EndWeek)
 ##############
-NG_2024['Weeknum']=NG_2024['Weeknum'].astype(str)
+NG_2024['Weeknum']=NG_2024['Weeknum'].astype(int)
 filtered = NG_2024[
     (NG_2024['Weeknum'] >= int(StartWeek)) &
     (NG_2024['Weeknum'] <= int(EndWeek))]
