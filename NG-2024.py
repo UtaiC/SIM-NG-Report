@@ -90,8 +90,8 @@ EndWeek=str(EndWeek)
 ##############
 NG_2024['Weeknum']=NG_2024['Weeknum'].astype(str)
 filtered = NG_2024[
-    (NG_2024['Weeknum'] >= StartWeek) &
-    (NG_2024['Weeknum'] <= EndWeek)]
+    (NG_2024['Weeknum'] >= int(StartWeek)) &
+    (NG_2024['Weeknum'] <= int(EndWeek))]
 ############# Files ##############
 chart=filtered
 ###############
