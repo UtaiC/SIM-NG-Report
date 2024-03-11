@@ -68,6 +68,8 @@ EndWeek = int(EndWeek)
 all_sheet_names = [str(week) for week in range(StartWeek, EndWeek + 1)]
 dataframes = load_dataframes(all_sheet_names)
 #########################
+FilesMO = load_dataframes(all_sheet_names)
+#########################
 # Concatenate dataframes into a single dataframe
 DataMerges = pd.concat(dataframes.values(), ignore_index=True)
 
@@ -340,6 +342,80 @@ if not matching_rows.empty:
         title=f"Part No #{PartNo} NG Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
         xaxis_title="Week",
         yaxis_title="NG_Pcs"
+    )
+    
+    st.plotly_chart(fig)
+    #####################
+
+###################### Part Trend-% ##################################
+matching_rows = matching_rows.reset_index()
+all_week_data = pd.DataFrame()
+
+# Iterate over each row in matching_rows
+for index, row in matching_rows.iterrows():
+    # Get the week number from the current row
+    week_num = row['Weeknum']
+    
+    # Check if the week sheet exists in FilesMO keys
+    if str(week_num) in FilesMO.keys():
+        # Access the data of the corresponding week sheet
+        week_data = FilesMO[str(week_num)]
+        week_data = week_data[['Part no.','Beginning Balance.6','Total.4']]
+        week_data['Total.4'] = pd.to_numeric(week_data['Total.4'], errors='coerce')
+        week_data['Beginning Balance.6'] = pd.to_numeric(week_data['Beginning Balance.6'], errors='coerce')
+
+        # Calculate 'QC-Prod' column
+        week_data['QC-Prod'] = week_data['Total.4'] - week_data['Beginning Balance.6']
+        week_data['Week-Num'] = week_num
+        
+        # Display the DataFrame for the current week
+        # st.write(f"Week {week_num} data:")
+        week_data=week_data[['Part no.','QC-Prod','Week-Num']]
+        all_week_data = pd.concat([all_week_data, week_data], ignore_index=True)
+        # all_week_data
+    else:
+        # Display a message indicating that the week sheet was not found
+        st.write(f"Week {week_num} sheet not found in datagram.")
+
+# Filter out rows with 'QC-Prod' equal to 0
+all_week_data = all_week_data[all_week_data['QC-Prod'] != 0]
+
+# Group by 'Part no.' and aggregate 'QC-Prod' for each part number
+# all_week_data = all_week_data.groupby('Part no.').agg({'QC-Prod': 'sum', 'Week-Num': 'first'}).reset_index()
+
+# Fill NaN values with 0
+all_week_data = all_week_data.fillna(0)
+
+# Display the concatenated DataFrame
+
+all_week_data['Part no.']=all_week_data['Part no.'].replace(0,'NoN')
+all_week_data=all_week_data[all_week_data['Part no.'].str.contains(PartNo)]
+# all_week_data
+#####################
+matching_PCS=pd.merge(matching_rows,all_week_data[['Week-Num','QC-Prod']],left_on='Weeknum',right_on='Week-Num',how='outer')
+matching_PCS['QC-Pcs']=matching_PCS['QC-Prod']+matching_PCS['ยอดตรวจงาน NG']
+matching_PCS['NG-%']=(matching_PCS['ยอดตรวจงาน NG']/matching_PCS['QC-Pcs'])*100
+############ Chart-Trend-Part No ##############################
+st.write("---")
+matching_PCS.drop_duplicates('Weeknum',inplace=True)
+matching_PCS.set_index('Weeknum',inplace=True)
+# matching_PCS
+# Ensure 'matching_rows' is not empty before creating the DataFrame 'df'
+if not matching_rows.empty:
+    df = pd.DataFrame({
+        "x": matching_PCS.index,
+        "y": matching_PCS['NG-%'],
+        "category": ["Week-NG"] * len(matching_rows)  # Assigning 'Week-NG' to all entries as 'category'
+    })
+    
+    fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.2f}%'), color_discrete_sequence=['#FF451B'])
+
+    # Updating layout to display text on top of bars
+    fig.update_traces(textposition='outside')
+    fig.update_layout(
+        title=f"Part No #{PartNo} NG-% Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+        xaxis_title="Week",
+        yaxis_title="NG_%"
     )
     
     st.plotly_chart(fig)
