@@ -10,6 +10,11 @@ import sys
 Logo=Image.open('SIM-LOGO-02.jpg')
 st.image(Logo,width=680)
 #########################################################
+def formatted_display0(label, value, unit):
+    formatted_value = "<span style='color:yellow'>{:,.0f}</span>".format(value)  # Format value with comma separator and apply green color
+    display_text = f"{formatted_value} {unit}"  # Combine formatted value and unit
+    st.write(label, display_text, unsafe_allow_html=True)
+######################################################
 def formatted_display(label, value, unit):
     formatted_value = "<span style='color:yellow'>{:,.2f}</span>".format(value)  # Format value with comma separator and apply green color
     display_text = f"{formatted_value} {unit}"  # Combine formatted value and unit
@@ -75,8 +80,7 @@ DataMerges['QC-Prod'] = DataMerges['Total.4'] - DataMerges['Beginning Balance.6'
 
 # Group by 'Part no.' and calculate the sum of 'Beginning Balance.6', 'Total.4', and 'QC-Prod'
 QC_Prod = DataMerges.groupby('Part no.')[['Beginning Balance.6', 'Total.4', 'QC-Prod','ACT.7']].sum()
-
-#################################################
+################################################
 @st.cache_data 
 def load_data_from_drive():
     url="https://docs.google.com/spreadsheets/d/1g57LMLyDlGkHpyfikvoXwO0fyzz-P_r62qV9M4GssOM/export?format=xlsx"
@@ -87,8 +91,8 @@ NG_2024=data2024
 ###############
 StartWeek=str(StartWeek)
 EndWeek=str(EndWeek)
-##############
-NG_2024['Weeknum']=NG_2024['Weeknum'].astype(int)
+##################
+NG_2024['Weeknum'] = NG_2024['Weeknum'].astype(int)
 filtered = NG_2024[
     (NG_2024['Weeknum'] >= int(StartWeek)) &
     (NG_2024['Weeknum'] <= int(EndWeek))]
@@ -162,8 +166,11 @@ ALLNGTop5=ALLNG.nlargest(10,'SUM-NG')
 
 st.subheader(f'Over All NG by week range: {StartWeek} - {EndWeek}')
 st.write('NG-Part_No Top 10')
+################## DF Display ###############
+ALLNGTop5=ALLNGTop5.loc[:,(ALLNGTop5!=0).any(axis=0)]
 ALLNGTop5
-formatted_display('TT-NG SUM Pcs:',round(TTNG),'Pcs')
+##################################
+formatted_display0('TT-NG SUM Pcs:',round(TTNG),'Pcs')
 st.write('NG-Types Top 10')
 ALLNGTopNG=ALLNGTop5.T
 ALLNGTopNG['NG-Top']=ALLNGTopNG.sum(axis=1)
@@ -303,8 +310,11 @@ if len(PartNo) == 4:
         ###################
         Other_Column = ['ยอดตรวจงาน NG'] + list(NGColumns.columns)
         matching_rows = matching_rows.groupby('Weeknum').agg({'Part No.': 'first', **{col: 'sum' for col in Other_Column}})
-        matching_rows
-        formatted_display('Total Pcs:',round(TTPCS,2),'Pcs')
+        ########################
+        matching_rows = matching_rows.loc[:, (matching_rows != 0).any(axis=0)]
+        matching_rows 
+        formatted_display0('Total Pcs:',round(TTPCS,2),'Pcs')
+        ########################
     else:
         st.write("No matching data found.")
         st.write("Pls Input 4-digit of the end of Part No")
@@ -314,7 +324,6 @@ if len(PartNo) == 0:
     sys.exit()
 ############ Chart-Trend-Part No ##############################
 st.write("---")
-
 # Ensure 'matching_rows' is not empty before creating the DataFrame 'df'
 if not matching_rows.empty:
     df = pd.DataFrame({
