@@ -86,7 +86,7 @@ QC_Prod = DataMerges.groupby('Part no.')[['Beginning Balance.6', 'Total.4', 'QC-
 @st.cache_data 
 def load_data_from_drive():
     url="https://docs.google.com/spreadsheets/d/1g57LMLyDlGkHpyfikvoXwO0fyzz-P_r62qV9M4GssOM/export?format=xlsx"
-    data2024=pd.read_excel(url)
+    data2024=pd.read_excel(url,sheet_name='inputdata')
     return data2024
 data2024 = load_data_from_drive()
 NG_2024=data2024
