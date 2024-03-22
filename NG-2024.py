@@ -8,7 +8,7 @@ import sys
 
 
 Logo=Image.open('SIM-LOGO-02.jpg')
-st.image(Logo,width=680)
+st.image(Logo,width=900)
 #########################################################
 def formatted_display0(label, value, unit):
     formatted_value = "<span style='color:yellow'>{:,.0f}</span>".format(value)  # Format value with comma separator and apply green color
@@ -72,16 +72,19 @@ FilesMO = load_dataframes(all_sheet_names)
 #########################
 # Concatenate dataframes into a single dataframe
 DataMerges = pd.concat(dataframes.values(), ignore_index=True)
-
+# DataMerges
 # Convert columns to numeric
-DataMerges['Total.4'] = pd.to_numeric(DataMerges['Total.4'], errors='coerce')
-DataMerges['Beginning Balance.6'] = pd.to_numeric(DataMerges['Beginning Balance.6'], errors='coerce')
-
-# Calculate 'QC-Prod' column
+DataMerges[['Total.1','Total.3', 'Total.4','ACT.7']] = DataMerges[['Total.1','Total.3', 'Total.4','ACT.7']].apply(pd.to_numeric, errors='coerce')
+DataMerges[['Beginning Balance.3','Beginning Balance.5','Beginning Balance.6']] = DataMerges[['Beginning Balance.3','Beginning Balance.5','Beginning Balance.6']].apply(pd.to_numeric, errors='coerce')
+DataMerges['FN-Prod'] = DataMerges['Total.1'] - DataMerges['Beginning Balance.3']
+DataMerges['MC-Prod'] = DataMerges['Total.3'] - DataMerges['Beginning Balance.5']
 DataMerges['QC-Prod'] = DataMerges['Total.4'] - DataMerges['Beginning Balance.6']
+DataMerges['Sales-Pcs'] = DataMerges['ACT.7']
 
-# Group by 'Part no.' and calculate the sum of 'Beginning Balance.6', 'Total.4', and 'QC-Prod'
+# DataMerges[['Part no.','Total.1','Beginning Balance.3','Total.3','Beginning Balance.5','Total.4','Beginning Balance.6']]
+
 QC_Prod = DataMerges.groupby('Part no.')[['Beginning Balance.6', 'Total.4', 'QC-Prod','ACT.7']].sum()
+Prod_Pcs = DataMerges.groupby('Part no.')[['FN-Prod','MC-Prod','QC-Prod','Sales-Pcs']].sum()
 ################################################
 @st.cache_data 
 def load_data_from_drive():
@@ -90,6 +93,7 @@ def load_data_from_drive():
     return data2024
 data2024 = load_data_from_drive()
 NG_2024=data2024
+# NG_2024
 ###############
 StartWeek=str(StartWeek)
 EndWeek=str(EndWeek)
@@ -102,6 +106,9 @@ filtered = NG_2024[
 chart=filtered
 ###############
 ALLNG=filtered
+# summ=ALLNG['ยอดตรวจงาน NG'].sum()
+# ALLNG
+# summ
 ###############
 TrendNG=filtered
 ################
@@ -121,11 +128,9 @@ SUM_NG=NG_WK[NG_Type].sum()
 Top5=NG_WK.nlargest(5,NG_Type)
 NG_SUM=filtered
 NG_SUM=NG_SUM[['Weeknum','Part No.','ยอดตรวจงาน NG']]
-
 Top5['NG-%']=(Top5[NG_Type]/NG_SUM['ยอดตรวจงาน NG'].sum())*100
 # Top5
 # formatted_display('NG SUM Pcs:',round(SUM_NG),'Pcs')
-
 TTNG=NG_SUM['ยอดตรวจงาน NG'].sum()
 ############ Chart ##############################
 chart=chart[['Part No.',NG_Type]]
@@ -157,29 +162,37 @@ NGColumns=ALLNG.loc[:,NG]
 ALLNG= ALLNG[['Part No.'] + NGColumns.columns.tolist()]
 ALLNG=ALLNG.groupby('Part No.').sum()
 ########## Merge QC-Prod ###############
-ALLNG=pd.merge(ALLNG,QC_Prod['QC-Prod'],left_index=True,right_index=True,how='left')
+ALLNG=pd.merge(ALLNG,Prod_Pcs[['FN-Prod','MC-Prod','QC-Prod','Sales-Pcs']],left_index=True,right_index=True,how='left')
 #######################################
 
 ALLNG['SUM-NG']=ALLNG.sum(axis=1)
-ALLNG['SUM-NG']=ALLNG['SUM-NG']-ALLNG['QC-Prod']
-ALLNG['QC-Prod']=ALLNG['QC-Prod'].where(ALLNG['QC-Prod']>0)+ALLNG['SUM-NG']
-ALLNG['NG-%']=(ALLNG['SUM-NG']/ALLNG['QC-Prod'])*100
+ALLNG['SUM-NG']=ALLNG['SUM-NG']-(ALLNG['FN-Prod']+ALLNG['MC-Prod']+ALLNG['QC-Prod']+ALLNG['Sales-Pcs'])
+ALLNG['NG-%']=(ALLNG['SUM-NG']/(ALLNG['FN-Prod']+ALLNG['MC-Prod']+ALLNG['QC-Prod']+ALLNG['Sales-Pcs']))*100
 ALLNGTop5=ALLNG.nlargest(10,'SUM-NG')
 
 st.subheader(f'Over All NG by week range: {StartWeek} - {EndWeek}')
 st.write('NG-Part_No Top 10')
 ################## DF Display ###############
 ALLNGTop5=ALLNGTop5.loc[:,(ALLNGTop5!=0).any(axis=0)]
+
 ALLNGTop5
 ##################################
 formatted_display0('TT-NG SUM Pcs:',round(TTNG),'Pcs')
+TTQC=ALLNGTop5['QC-Prod'].sum()
+formatted_display0('TT-QC SUM Pcs:',round(TTQC),'Pcs')
+TTNGPCT=(TTNG/TTQC)*100
+formatted_display('TT-QC SUM Pcs:',round(TTNGPCT),'%')
+#################################
 st.write('NG-Types Top 10')
 ALLNGTopNG=ALLNGTop5.T
 ALLNGTopNG['NG-Top']=ALLNGTopNG.sum(axis=1)
 ALLNGTopNG=ALLNGTopNG.drop(index=['QC-Prod','NG-%','SUM-NG'])
 ALLNGTopNG=ALLNGTopNG.nlargest(12,'NG-Top')
+excluded=['FN-Prod','Sales-Pcs','MC-Prod']
+mask = ~ALLNGTopNG.index.isin(excluded)
+ALLNGTopNG=ALLNGTopNG[mask]
 ALLNGTopNG
-################## Top 10 Part NG ###################
+################## Top 10 Part NG-% ###################
 PartTOP10=ALLNGTop5.nlargest(10,'NG-%')
 df = pd.DataFrame({
     "x": PartTOP10.index,
@@ -194,6 +207,24 @@ figPCT.update_layout(
     title=f'Part No NG-% TOP10@ range WK0{StartWeek} - WK0{EndWeek}',
     xaxis_title="Part No",
     yaxis_title="NG_%"
+)
+
+st.plotly_chart(figPCT)
+################## Top 10 Part NG-Pcs ###################
+PartTOP10=ALLNGTop5.nlargest(10,'SUM-NG')
+df = pd.DataFrame({
+    "x": PartTOP10.index,
+    "y": PartTOP10['SUM-NG'],
+    "category": ["Part NG"] * len(PartTOP10)  # Assigning 'Part_No' to all entries as 'category'
+})
+figPCT = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.0f} Pcs'), color_discrete_sequence=['#F97500'])
+
+# Updating layout to display text on top of bars
+figPCT.update_traces(textposition='outside')
+figPCT.update_layout(
+    title=f'Part No NG-Pcs TOP10@ range WK0{StartWeek} - WK0{EndWeek}',
+    xaxis_title="Part No",
+    yaxis_title="NG_Pcs"
 )
 
 st.plotly_chart(figPCT)
@@ -339,7 +370,7 @@ if not matching_rows.empty:
     # Updating layout to display text on top of bars
     fig.update_traces(textposition='outside')
     fig.update_layout(
-        title=f"Part No #{PartNo} NG Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+        title=f"Part No #{PartNo} ALL NG Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
         xaxis_title="Week",
         yaxis_title="NG_Pcs"
     )
@@ -413,11 +444,59 @@ if not matching_rows.empty:
     # Updating layout to display text on top of bars
     fig.update_traces(textposition='outside')
     fig.update_layout(
-        title=f"Part No #{PartNo} NG-% Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+        title=f"Part No #{PartNo} ALL NG-% Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
         xaxis_title="Week",
         yaxis_title="NG_%"
     )
     
-    st.plotly_chart(fig)
+    # st.plotly_chart(fig)
     #####################
+    NG_Case=matching_PCS[NG_Type]
+    # NG_Case
+if not matching_rows.empty:
+    df = pd.DataFrame({
+        "x": NG_Case.index,
+        "y": NG_Case,
+        "category": ["Week-NG"] * len(matching_rows)  # Assigning 'Week-NG' to all entries as 'category'
+    })
+    
+    fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.0f} Pcs'), color_discrete_sequence=['#FF451B'])
+
+    # Updating layout to display text on top of bars
+    fig.update_traces(textposition='outside')
+    fig.update_layout(
+        title=f"Part No #{PartNo} -{NG_Type} Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+        xaxis_title="Week",
+        yaxis_title="NG_Pcs"
+    )
+    
+    st.plotly_chart(fig)
+
+    #####################
+# Prod_Pcs
+# matching_PCS
+# # matching_PCS=pd.merge(matching_PCS,Prod_Pcs,left_on='Part No.',right_index=True,how='left')
+# # matching_PCS
+# matching_PCS['Check-Pcs']=(matching_PCS['FN-Prod']+matching_PCS['MC-Prod']+matching_PCS['QC-Prod']+matching_PCS['Sales-Pcs'])
+# NG_CasePCT = matching_PCS[[NG_Type, 'QC-Pcs']]
+# NG_CasePCT['Case-%'] = (NG_CasePCT[NG_Type] / NG_CasePCT['QC-Pcs']) * 100
+# # NG_CasePCT
+# if not matching_rows.empty:
+#     df = pd.DataFrame({
+#         "x": NG_CasePCT.index,
+#         "y": NG_CasePCT['Case-%'],
+#         "category": ["Week-NG"] * len(matching_rows)  # Assigning 'Week-NG' to all entries as 'category'
+#     })
+    
+#     fig = px.bar(df, x='x', y='y', color='category', text=df['y'].apply(lambda x: f'{x:,.2f} %'), color_discrete_sequence=['#FF451B'])
+
+#     # Updating layout to display text on top of bars
+#     fig.update_traces(textposition='outside')
+#     fig.update_layout(
+#         title=f"Part No #{PartNo} -{NG_Type}-% Trend by Week range WK0{StartWeek} - WK0{EndWeek}",
+#         xaxis_title="Week",
+#         yaxis_title="NG_%"
+#     )
+    
+#     st.plotly_chart(fig)
 st.write("---End Application---")
