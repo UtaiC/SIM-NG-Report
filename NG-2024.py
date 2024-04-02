@@ -98,7 +98,20 @@ NG_2024=data2024
 StartWeek=str(StartWeek)
 EndWeek=str(EndWeek)
 ##################
+missing_values = NG_2024['Weeknum'].isna().sum()
+non_finite_values = ~np.isfinite(NG_2024['Weeknum']).sum()
+
+if missing_values > 0:
+    # Handle missing values (e.g., fill with a specific value or drop rows)
+    NG_2024['Weeknum'].fillna(0, inplace=True)  # Example: fill with 0
+if non_finite_values > 0:
+    # Handle non-finite values (e.g., replace with a specific value or drop rows)
+    NG_2024['Weeknum'].replace([np.inf, -np.inf], np.nan, inplace=True)  # Example: replace with NaN
+
+# Convert to integer type
 NG_2024['Weeknum'] = NG_2024['Weeknum'].astype(int)
+#################
+# NG_2024['Weeknum'] = NG_2024['Weeknum'].astype(int)
 filtered = NG_2024[
     (NG_2024['Weeknum'] >= int(StartWeek)) &
     (NG_2024['Weeknum'] <= int(EndWeek))]
