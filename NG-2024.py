@@ -192,9 +192,9 @@ ALLNGTop5
 ##################################
 formatted_display0('TT-NG SUM Pcs:',round(TTNG),'Pcs')
 TTQC=ALLNGTop5['QC-Prod'].sum()
-formatted_display0('TT-QC SUM Pcs:',round(TTQC),'Pcs')
-TTNGPCT=(TTNG/TTQC)*100
-formatted_display('TT-QC SUM Pcs:',round(TTNGPCT),'%')
+formatted_display0('TT-NG SUM Pcs:',round(TTQC),'Pcs')
+TTNGPCT=ALLNG['NG-%'].mean()
+formatted_display('TT-NG-%:',round(TTNGPCT),'%')
 #################################
 st.write('NG-Types Top 10')
 ALLNGTopNG=ALLNGTop5.T
