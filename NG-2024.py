@@ -193,6 +193,7 @@ ALLNGTop5
 formatted_display0('TT-NG SUM Pcs:',round(TTNG),'Pcs')
 TTQC=ALLNGTop5['QC-Prod'].sum()
 formatted_display0('TT-NG SUM Pcs:',round(TTQC),'Pcs')
+ALLNG['NG-%'] = pd.to_numeric(ALLNG['NG-%'], errors='coerce')  # Convert to numeric, coerce errors to NaN
 TTNGPCT=ALLNG['NG-%'].mean()
 formatted_display('TT-NG-%:',round(TTNGPCT),'%')
 #################################
