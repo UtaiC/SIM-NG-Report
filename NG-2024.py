@@ -196,7 +196,7 @@ formatted_display0('TT-NG SUM Pcs:',round(TTQC),'Pcs')
 ALLNG['NG-%'] = pd.to_numeric(ALLNG['NG-%'], errors='coerce')  # Convert to numeric, coerce errors to NaN
 ALLNG.replace([np.inf, -np.inf], np.nan, inplace=True)
 TTNGPCT=ALLNG['NG-%'].mean()
-formatted_display('TT-NG-%:',round(TTNGPCT),'%')
+formatted_display('TT-NG-%:',round(TTNGPCT,2),'%')
 #################################
 st.write('NG-Types Top 10')
 ALLNGTopNG=ALLNGTop5.T
