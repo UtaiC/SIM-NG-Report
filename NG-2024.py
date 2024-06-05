@@ -181,13 +181,13 @@ ALLNG=pd.merge(ALLNG,Prod_Pcs[['FN-Prod','MC-Prod','QC-Prod','Sales-Pcs']],left_
 ALLNG['SUM-NG']=ALLNG.sum(axis=1)
 ALLNG['SUM-NG']=ALLNG['SUM-NG']-(ALLNG['FN-Prod']+ALLNG['MC-Prod']+ALLNG['QC-Prod']+ALLNG['Sales-Pcs'])
 ALLNG['NG-%']=(ALLNG['SUM-NG']/(ALLNG['FN-Prod']+ALLNG['MC-Prod']+ALLNG['QC-Prod']+ALLNG['Sales-Pcs']))*100
-ALLNGTop5=ALLNG.nlargest(10,'SUM-NG')
+ALLNGTop5=ALLNG#.nlargest(10,'SUM-NG')
 
 st.subheader(f'Over All NG by week range: {StartWeek} - {EndWeek}')
 st.write('NG-Part_No Top 10')
 ################## DF Display ###############
-ALLNGTop5=ALLNGTop5.loc[:,(ALLNGTop5!=0).any(axis=0)]
-
+# ALLNGTop5=ALLNGTop5.loc[:,(ALLNGTop5!=0).any(axis=0)]
+ALLNGTop5=ALLNGTop5.fillna(0)
 ALLNGTop5
 ##################################
 formatted_display0('TT-NG SUM Pcs:',round(TTNG),'Pcs')
