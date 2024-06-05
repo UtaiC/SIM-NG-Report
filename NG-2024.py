@@ -184,7 +184,7 @@ ALLNG['NG-%']=(ALLNG['SUM-NG']/(ALLNG['FN-Prod']+ALLNG['MC-Prod']+ALLNG['QC-Prod
 ALLNGTop5=ALLNG#.nlargest(10,'SUM-NG')
 
 st.subheader(f'Over All NG by week range: {StartWeek} - {EndWeek}')
-st.write('NG-Part_No Top 10')
+st.write('NG-Part_No All NG')
 ################## DF Display ###############
 # ALLNGTop5=ALLNGTop5.loc[:,(ALLNGTop5!=0).any(axis=0)]
 ALLNGTop5=ALLNGTop5.fillna(0)
