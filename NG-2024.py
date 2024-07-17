@@ -21,8 +21,8 @@ def formatted_display(label, value, unit):
     st.write(label, display_text, unsafe_allow_html=True)
 ######################################################
 st.header('NG Report and Analysis 2024')
-StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26'] )
-EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26'] )
+StartWeek = st.sidebar.selectbox('StratWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30'] )
+EndWeek = st.sidebar.selectbox('EndWeek',['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30'] )
 # ProdWeek = st.sidebar.selectbox('ProdWeek',['1','2','3','4','5','6','7','8','9'] )
 NG_Type = st.sidebar.selectbox('NG-Type',[
                                         'NG - ตามด (Porosity)',
