@@ -435,7 +435,7 @@ all_week_data = all_week_data.fillna(0)
 # Display the concatenated DataFrame
 
 all_week_data['Part no.']=all_week_data['Part no.'].replace(0,'NoN')
-all_week_data=all_week_data[all_week_data['Part no.'].str.contains(PartNo)]
+# all_week_data=all_week_data[all_week_data['Part no.'].str.contains(PartNo)]
 # all_week_data
 #####################
 matching_PCS=pd.merge(matching_rows,all_week_data[['Week-Num','QC-Prod']],left_on='Weeknum',right_on='Week-Num',how='outer')
